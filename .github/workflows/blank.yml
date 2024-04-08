@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - main  # Adjust this to the branch you want the releases to be based on.
+      - main  # Adjust this to match your desired branch
 
 jobs:
   build-and-release:
@@ -20,7 +20,7 @@ jobs:
       uses: actions/setup-java@v2
       with:
         java-version: '20'
-        distribution: 'temurin' # Temurin is the community distribution from Adoptium.
+        distribution: 'temurin'
 
     - name: Grant execute permission for gradlew
       run: chmod +x ./gradlew
@@ -32,7 +32,7 @@ jobs:
       id: create_release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # This token is automatically provided by GitHub.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }}
         release_name: Release ${{ github.ref_name }}
@@ -43,8 +43,9 @@ jobs:
       id: find_jar
       run: |
         jar_path=$(ls ./build/libs/*.jar | head -n 1)
-        echo "Found JAR at $jar_path"
         echo "::set-output name=jar_path::$jar_path"
+        jar_name=$(basename $jar_path)
+        echo "::set-output name=jar_name::$jar_name"
       shell: bash
 
     - name: Upload Release Asset
@@ -54,5 +55,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ${{ steps.find_jar.outputs.jar_path }}
-        asset_name: ${{ steps.find_jar.outputs.jar_path | split('/') | last }}
+        asset_name: ${{ steps.find_jar.outputs.jar_name }}
         asset_content_type: application/java-archive
