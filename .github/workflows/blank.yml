@@ -1,9 +1,12 @@
 name: Build and Release
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main 
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,11 +19,39 @@ jobs:
     - name: Set up JDK 20
       uses: actions/setup-java@v2
       with:
-        java-version: '20' # Use OpenJDK 20
-        distribution: 'temurin' # Adoptium's Temurin distribution
+        java-version: '20'
+        distribution: 'temurin'
 
     - name: Grant execute permission for gradlew
       run: chmod +x ./gradlew
 
     - name: Build with Gradle
       run: ./gradlew build
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+
+    - name: Find JAR
+      id: find_jar
+      run: |
+        jar_path=$(ls ./build/libs/*.jar | head -n 1)
+        echo "::set-output name=jar_path::$jar_path"
+      shell: bash
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.find_jar.outputs.jar_path }}
+        asset_name: ${{ steps.find_jar.outputs.jar_path | split('/') | last }}
+        asset_content_type: application/java-archive
